@@ -241,7 +241,9 @@ func (c *Config) validate() error {
 	}
 
 	if c.Logger == nil {
+		raftLoggerMu.Lock()
 		c.Logger = raftLogger
+		raftLoggerMu.Unlock()
 	}
 
 	if c.ReadOnlyOption == ReadOnlyLeaseBased && !c.CheckQuorum {
