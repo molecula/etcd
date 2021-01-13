@@ -15,12 +15,18 @@
 package embed
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"go.etcd.io/etcd/clientv3"
+	"google.golang.org/grpc/grpclog"
 )
 
 func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
@@ -28,6 +34,8 @@ func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
 	clusterSize := 3
 	cfgs := make([]*Config, clusterSize)
 	clusterURLs := make([]string, clusterSize)
+	var endpointsP []string
+	var endpointsC []string
 
 	for i := range cfgs {
 
@@ -70,6 +78,8 @@ func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
 		cfg.LClientSocket = []*net.TCPListener{client.(*net.TCPListener)}
 		//cfg.ClusterName = "bartholemuuuuu"
 
+		endpointsC = append(endpointsC, clientURL.String())
+		endpointsP = append(endpointsP, peerURL.String())
 		clusterURLs[i] = fmt.Sprintf("%s=%s", name, peerURL)
 		cfgs[i] = cfg
 	}
@@ -88,17 +98,35 @@ func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
 		_ = etcd
 	}
 
-	select {}
-}
+	// check the cluster using the client
+	clientv3.SetLogger(grpclog.NewLoggerV2(os.Stderr, os.Stderr, os.Stderr))
 
-/*
-func GetAvailPort() int {
-	l, _ := net.Listen("tcp", ":0")
-	r := l.Addr()
-	l.Close()
-	return r.(*net.TCPAddr).Port
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpointsC,
+		DialTimeout: time.Second * 10,
+	})
+	panicOn(err)
+	defer cli.Close() // make sure to close the client
+
+	_, err = cli.Put(context.TODO(), "foo", "bar")
+	panicOn(err)
+
+	resp, err := cli.Get(context.TODO(), "foo")
+	panicOn(err)
+	obs := string(resp.Kvs[0].Value)
+	if obs != "bar" {
+		panic(fmt.Sprintf("expected '%v', observerd '%v'", "bar", obs))
+	}
+
+	// verify our ports are now bound, both Peer and Client.
+	for _, hp := range append(endpointsP, endpointsC...) {
+		c, err := net.Dial("tcp", strings.TrimPrefix(hp, "http://"))
+		panicOn(err)
+		panicOn(c.Close())
+	}
+
+	fmt.Printf("DONE! resp='%v'\n", obs)
 }
-*/
 
 func panicOn(err error) {
 	if err != nil {
