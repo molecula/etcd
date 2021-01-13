@@ -570,9 +570,29 @@ func updateCipherSuites(tls *transport.TLSInfo, ss []string) error {
 	return nil
 }
 
+// validateSockets ensures that the option pre-bound socket slices, if
+// supplied, are matched by the len of the LPUrls and LCUrls because
+// we still depend on the LPUrls to loop over during setup.
+func (cfg *Config) validateSockets() error {
+	nSocket := len(cfg.LPeerSocket)
+	nl := len(cfg.LPUrls)
+	if nSocket > 0 && nl != nSocket {
+		return fmt.Errorf("len(cfg.LPeerSocket) was %v; if not zero then it must match len(cfg.LPUrls) which is %v", nSocket, nl)
+	}
+	nSocket = len(cfg.LClientSocket)
+	nl = len(cfg.LCUrls)
+	if nSocket > 0 && nl != nSocket {
+		return fmt.Errorf("len(cfg.LClientSocket) was %v; if not zero then it must match len(cfg.LCUrls) which is %v", nSocket, nl)
+	}
+	return nil
+}
+
 // Validate ensures that '*embed.Config' fields are properly configured.
 func (cfg *Config) Validate() error {
 	if err := cfg.setupLogging(); err != nil {
+		return err
+	}
+	if err := cfg.validateSockets(); err != nil {
 		return err
 	}
 	if err := checkBindURLs(cfg.LPUrls); err != nil {
