@@ -516,7 +516,11 @@ func configurePeerListeners(cfg *Config) (peers []*peerListener, err error) {
 			}
 		}
 		peers[i] = &peerListener{close: func(context.Context) error { return nil }}
-		peers[i].Listener, err = rafthttp.NewListener(u, &cfg.PeerTLSInfo)
+		var peerSocket *net.TCPListener
+		if len(cfg.LPeerSocket) > 0 {
+			peerSocket = cfg.LPeerSocket[i]
+		}
+		peers[i].Listener, err = rafthttp.NewListener(u, &cfg.PeerTLSInfo, peerSocket)
 		if err != nil {
 			return nil, err
 		}
@@ -609,7 +613,7 @@ func configureClientListeners(cfg *Config) (sctxs map[string]*serveCtx, err erro
 	}
 
 	sctxs = make(map[string]*serveCtx)
-	for _, u := range cfg.LCUrls {
+	for k, u := range cfg.LCUrls {
 		sctx := newServeCtx(cfg.logger)
 		if u.Scheme == "http" || u.Scheme == "unix" {
 			if !cfg.ClientTLSInfo.Empty() {
@@ -647,8 +651,14 @@ func configureClientListeners(cfg *Config) (sctxs map[string]*serveCtx, err erro
 			continue
 		}
 
-		if sctx.l, err = net.Listen(network, addr); err != nil {
-			return nil, err
+		if len(cfg.LClientSocket) > 0 {
+			// pre-bound sockets take priority.
+			sctx.l = cfg.LClientSocket[k]
+			addr = sctx.l.Addr().String()
+		} else {
+			if sctx.l, err = net.Listen(network, addr); err != nil {
+				return nil, err
+			}
 		}
 		// net.Listener will rewrite ipv4 0.0.0.0 to ipv6 [::], breaking
 		// hosts that disable ipv6. So, use the address given by the user.

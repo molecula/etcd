@@ -176,16 +176,15 @@ type Config struct {
 	MaxTxnOps         uint  `json:"max-txn-ops"`
 	MaxRequestBytes   uint  `json:"max-request-bytes"`
 
-	LPUrls2        []url.URL
+	LPUrls         []url.URL
 	LCUrls         []url.URL
 	APUrls, ACUrls []url.URL
 
 	// If not nil, we prefer these pre-allocated TCP sockets to LPUrls and LCUrls, if provided.
 	// Enables testing infrastructure to avoid "address already in use" problems.
-	// These are pointers to interfaces to make it easy to tell the
-	// difference between nil and an interface containing a nil pointer.
-	LPeerSocket   *net.TCPListener
-	LClientSocket *net.TCPListener
+	// len(LPeerSocket) must match len(LPUrls), if len(LPeerSocket) > 0.
+	LPeerSocket   []*net.TCPListener
+	LClientSocket []*net.TCPListener
 
 	ClientTLSInfo transport.TLSInfo
 	ClientAutoTLS bool
