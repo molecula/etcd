@@ -37,7 +37,13 @@ func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
 		panicOn(err)
 
 		peerPort := peer.Addr().(*net.TCPAddr).Port
-		clientPort := peer.Addr().(*net.TCPAddr).Port
+		clientPort := client.Addr().(*net.TCPAddr).Port
+
+		fmt.Printf(" for cfg i=%v, peerPort=%v,  clientPort=%v\n", i, peerPort, clientPort)
+
+		// for cfg i=0, peerPort=32845,  clientPort=40167
+		// for cfg i=1, peerPort=46249,  clientPort=40635
+		// for cfg i=2, peerPort=39757,  clientPort=45535
 
 		scheme := "http"
 		peerURL, _ := url.Parse(fmt.Sprintf("%s://localhost:%d", scheme, peerPort))
@@ -49,8 +55,8 @@ func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
 		name := fmt.Sprintf("server%v", i)
 
 		cfg := NewConfig()
-		cfg.Logger = "zap"
-		cfg.LogOutputs = []string{"/dev/null"}
+		//cfg.Logger = "zap"
+		cfg.LogOutputs = []string{"stdout"}
 		cfg.Debug = false
 		cfg.Name = name
 		cfg.Dir = dir
