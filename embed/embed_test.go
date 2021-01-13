@@ -96,6 +96,7 @@ func TestMultipleEmbededEtcdInOneProcess(t *testing.T) {
 			panic(err)
 		}
 		_ = etcd
+		defer etcd.Close()
 	}
 
 	// check the cluster using the client
