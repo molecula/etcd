@@ -453,7 +453,6 @@ func stopServers(ctx context.Context, ss *servers) {
 func (e *Etcd) Err() <-chan error { return e.errc }
 
 func configurePeerListeners(cfg *Config) (peers []*peerListener, err error) {
-	fmt.Printf("99999999999 configurePeerListeners top\n")
 
 	if err = updateCipherSuites(&cfg.PeerTLSInfo, cfg.CipherSuites); err != nil {
 		return nil, err
@@ -521,7 +520,6 @@ func configurePeerListeners(cfg *Config) (peers []*peerListener, err error) {
 		var peerSocket *net.TCPListener
 		if len(cfg.LPeerSocket) > 0 {
 			peerSocket = cfg.LPeerSocket[i]
-			fmt.Printf("99999999999 configurePeerListeners: setting peerSocket to be '%#v'\n", peerSocket)
 		}
 		peers[i].Listener, err = rafthttp.NewListener(u, &cfg.PeerTLSInfo, peerSocket)
 		if err != nil {
