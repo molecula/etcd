@@ -176,12 +176,20 @@ type Config struct {
 	MaxTxnOps         uint  `json:"max-txn-ops"`
 	MaxRequestBytes   uint  `json:"max-request-bytes"`
 
-	LPUrls, LCUrls []url.URL
+	LPUrls         []url.URL
+	LCUrls         []url.URL
 	APUrls, ACUrls []url.URL
-	ClientTLSInfo  transport.TLSInfo
-	ClientAutoTLS  bool
-	PeerTLSInfo    transport.TLSInfo
-	PeerAutoTLS    bool
+
+	// If not nil, we prefer these pre-allocated TCP sockets to LPUrls and LCUrls, if provided.
+	// Enables testing infrastructure to avoid "address already in use" problems.
+	// len(LPeerSocket) must match len(LPUrls), if len(LPeerSocket) > 0.
+	LPeerSocket   []*net.TCPListener
+	LClientSocket []*net.TCPListener
+
+	ClientTLSInfo transport.TLSInfo
+	ClientAutoTLS bool
+	PeerTLSInfo   transport.TLSInfo
+	PeerAutoTLS   bool
 
 	// CipherSuites is a list of supported TLS cipher suites between
 	// client/server and peers. If empty, Go auto-populates the list.
@@ -562,9 +570,29 @@ func updateCipherSuites(tls *transport.TLSInfo, ss []string) error {
 	return nil
 }
 
+// validateSockets ensures that the option pre-bound socket slices, if
+// supplied, are matched by the len of the LPUrls and LCUrls because
+// we still depend on the LPUrls to loop over during setup.
+func (cfg *Config) validateSockets() error {
+	nSocket := len(cfg.LPeerSocket)
+	nl := len(cfg.LPUrls)
+	if nSocket > 0 && nl != nSocket {
+		return fmt.Errorf("len(cfg.LPeerSocket) was %v; if not zero then it must match len(cfg.LPUrls) which is %v", nSocket, nl)
+	}
+	nSocket = len(cfg.LClientSocket)
+	nl = len(cfg.LCUrls)
+	if nSocket > 0 && nl != nSocket {
+		return fmt.Errorf("len(cfg.LClientSocket) was %v; if not zero then it must match len(cfg.LCUrls) which is %v", nSocket, nl)
+	}
+	return nil
+}
+
 // Validate ensures that '*embed.Config' fields are properly configured.
 func (cfg *Config) Validate() error {
 	if err := cfg.setupLogging(); err != nil {
+		return err
+	}
+	if err := cfg.validateSockets(); err != nil {
 		return err
 	}
 	if err := checkBindURLs(cfg.LPUrls); err != nil {

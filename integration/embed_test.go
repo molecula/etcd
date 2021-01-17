@@ -21,6 +21,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -194,4 +195,46 @@ func setupEmbedCfg(cfg *embed.Config, curls []url.URL, purls []url.URL) {
 		cfg.InitialCluster += ",default=" + purls[i].String()
 	}
 	cfg.InitialCluster = cfg.InitialCluster[1:]
+}
+
+func newInjectTCP_URLs(secure bool, n int) (urls []url.URL) {
+	scheme := "http"
+	if secure {
+		scheme = "https"
+	}
+	for i := 0; i < n; i++ {
+		lsn, err := net.Listen("tcp", ":0")
+		if err != nil {
+			panic(err)
+		}
+		port := lsn.Addr().(*net.TCPAddr).Port
+		err = lsn.Close()
+		if err != nil {
+			panic(err)
+		}
+		u, _ := url.Parse(fmt.Sprintf("%s://localhost:%d", scheme, port))
+		urls = append(urls, *u)
+	}
+	return urls
+}
+
+func setupEmbedCfgInjectSocket(cfg *embed.Config, curls []url.URL, purls []url.URL) {
+	setupEmbedCfg(cfg, curls, purls)
+	for _, url := range purls {
+		hp := url.Hostname() + ":" + url.Port()
+		lsn, err := net.Listen("tcp", hp)
+		if err != nil {
+			panic(fmt.Errorf("could not bind hp '%v'", hp))
+		}
+		cfg.LPeerSocket = append(cfg.LPeerSocket, lsn.(*net.TCPListener))
+	}
+
+	for _, url := range curls {
+		hp := url.Hostname() + ":" + url.Port()
+		lsn, err := net.Listen("tcp", hp)
+		if err != nil {
+			panic(fmt.Errorf("could not bind hp '%v'", hp))
+		}
+		cfg.LClientSocket = append(cfg.LClientSocket, lsn.(*net.TCPListener))
+	}
 }
