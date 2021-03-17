@@ -1059,6 +1059,11 @@ func (s *EtcdServer) run() {
 			f := func(context.Context) { s.applyAll(&ep, &ap) }
 			sched.Schedule(f)
 		case leases := <-expiredLeaseC:
+			leaseData := make([]lease.Lease, len(leases))
+			for i := range leases {
+				leaseData[i] = *leases[i]
+			}
+			fmt.Printf("expired leases: expiring leases: %#v\n", leaseData)
 			s.goAttach(func() {
 				// Increases throughput of expired leases deletion process through parallelization
 				c := make(chan struct{}, maxPendingRevokes)
