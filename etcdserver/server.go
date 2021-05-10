@@ -380,9 +380,27 @@ func NewServer(cfg ServerConfig) (srv *EtcdServer, err error) {
 			return nil, err
 		}
 		m := cl.MemberByName(cfg.Name)
+		at := time.Now()
+		fmt.Printf(">isMemberBootstrapped %s at %v\n", cfg.Name, at)
+		done := make(chan struct{})
+		go func() {
+			them := cl.Members()
+			soon := (time.Duration(len(them)) * cfg.bootstrapTimeout()) + (1 * time.Second)
+			soonTimer := time.NewTimer(soon)
+			select {
+			case <-done:
+				soonTimer.Stop()
+			case <-soonTimer.C:
+				fmt.Printf("delay too long: %v\n", time.Since(at))
+				panic("oops")
+			}
+		}()
 		if isMemberBootstrapped(cfg.Logger, cl, cfg.Name, prt, cfg.bootstrapTimeout()) {
+			close(done)
 			return nil, fmt.Errorf("member %s has already been bootstrapped", m.ID)
 		}
+		close(done)
+		fmt.Printf("<isMemberBootstrapped %s (%v)\n", cfg.Name, time.Since(at))
 		if cfg.ShouldDiscover() {
 			var str string
 			str, err = v2discovery.JoinCluster(cfg.Logger, cfg.DiscoveryURL, cfg.DiscoveryProxy, m.ID, cfg.InitialPeerURLsMap.String())
@@ -401,6 +419,7 @@ func NewServer(cfg ServerConfig) (srv *EtcdServer, err error) {
 				return nil, err
 			}
 		}
+		fmt.Printf("post-discovery %s: %v\n", cfg.Name, time.Since(at))
 		cl.SetStore(st)
 		cl.SetBackend(be)
 		id, n, s, w = startNode(cfg, cl, cl.MemberIDs())
@@ -2011,6 +2030,7 @@ func (s *EtcdServer) sync(timeout time.Duration) {
 // process publish requests through rafthttp
 // TODO: Deprecate v2 store
 func (s *EtcdServer) publish(timeout time.Duration) {
+	fmt.Printf("etcdserver %s publish starting %v, timeout %v\n", s.Cfg.Name, time.Now(), timeout)
 	b, err := json.Marshal(s.attributes)
 	if err != nil {
 		if lg := s.getLogger(); lg != nil {
@@ -2032,6 +2052,7 @@ func (s *EtcdServer) publish(timeout time.Duration) {
 		cancel()
 		switch err {
 		case nil:
+			fmt.Printf("etcdserver %s publish completed %v\n", s.Cfg.Name, time.Now())
 			close(s.readych)
 			if lg := s.getLogger(); lg != nil {
 				lg.Info(

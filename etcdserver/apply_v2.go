@@ -62,6 +62,10 @@ func (a *applierV2store) Post(r *RequestV2) Response {
 }
 
 func (a *applierV2store) Put(r *RequestV2) Response {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("applierV2store.Put: %v\n", time.Since(startTime))
+	}()
 	ttlOptions := r.TTLOptions()
 	exists, existsSet := pbutil.GetBool(r.PrevExist)
 	switch {
@@ -87,7 +91,10 @@ func (a *applierV2store) Put(r *RequestV2) Response {
 				}
 			}
 			if a.cluster != nil {
+				startTime := time.Now()
+				fmt.Printf("starting applierV2store.Put: %v\n", time.Now())
 				a.cluster.UpdateAttributes(id, attr)
+				fmt.Printf("applierV2store.Put updating attributes: %v\n", time.Since(startTime))
 			}
 			// return an empty response since there is no consumer.
 			return Response{}
