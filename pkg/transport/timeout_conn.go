@@ -39,10 +39,6 @@ func (c timeoutConn) Read(b []byte) (n int, err error) {
 		if err := c.SetReadDeadline(time.Now().Add(c.rdtimeoutd)); err != nil {
 			return 0, err
 		}
-		// make stack backtrace look different
-		return func() (int, error) {
-			return c.Conn.Read(b)
-		}()
 	}
 	return c.Conn.Read(b)
 }

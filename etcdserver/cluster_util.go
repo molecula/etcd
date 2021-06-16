@@ -62,18 +62,12 @@ func GetClusterFromRemotePeers(lg *zap.Logger, urls []string, rt http.RoundTripp
 }
 
 // If logerr is true, it prints out more error messages.
-func getClusterFromRemotePeers(lg *zap.Logger, urls []string, timeout time.Duration, logerr bool, rt http.RoundTripper) (rc *membership.RaftCluster, err error) {
+func getClusterFromRemotePeers(lg *zap.Logger, urls []string, timeout time.Duration, logerr bool, rt http.RoundTripper) (*membership.RaftCluster, error) {
 	cc := &http.Client{
 		Transport: rt,
 		Timeout:   timeout,
 	}
-	fmt.Printf(">gCFRP\n")
-	seen := make([]string, 0, len(urls))
-	defer func() {
-		fmt.Printf("<gCFRP: %s %v\n", seen, err)
-	}()
 	for _, u := range urls {
-		seen = append(seen, u)
 		addr := u + "/members"
 		resp, err := cc.Get(addr)
 		if err != nil {

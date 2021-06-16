@@ -229,7 +229,6 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 			return e, err
 		}
 	}
-	fmt.Printf("embed/etcd: %s calling Start() %v\n", e.cfg.Name, time.Now())
 	e.Server.Start()
 
 	if err = e.servePeers(); err != nil {
@@ -253,7 +252,6 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 			zap.Strings("listen-metrics-urls", e.cfg.getMetricsURLs()),
 		)
 	}
-	fmt.Printf("embed/etcd: %s started %v\n", e.cfg.Name, time.Now())
 	serving = true
 	return e, nil
 }

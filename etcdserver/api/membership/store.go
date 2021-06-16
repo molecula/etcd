@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
-	"time"
 
 	"go.etcd.io/etcd/etcdserver/api/v2store"
 	"go.etcd.io/etcd/mvcc/backend"
@@ -45,7 +44,6 @@ var (
 )
 
 func mustSaveMemberToBackend(be backend.Backend, m *Member) {
-	startTime := time.Now()
 	mkey := backendMemberKey(m.ID)
 	mvalue, err := json.Marshal(m)
 	if err != nil {
@@ -53,9 +51,7 @@ func mustSaveMemberToBackend(be backend.Backend, m *Member) {
 	}
 
 	tx := be.BatchTx()
-	lockTime := time.Now()
 	tx.Lock()
-	fmt.Printf("mustSaveMember: %v from start, %v from lock\n", time.Since(startTime), time.Since(lockTime))
 	tx.UnsafePut(membersBucketName, mkey, mvalue)
 	tx.Unlock()
 }
@@ -116,11 +112,9 @@ func mustUpdateMemberAttrInStore(s v2store.Store, m *Member) {
 		plog.Panicf("marshal raftAttributes should never fail: %v", err)
 	}
 	p := path.Join(MemberStoreKey(m.ID), attributesSuffix)
-	startTime := time.Now()
 	if _, err := s.Set(p, false, string(b), v2store.TTLOptionSet{ExpireTime: v2store.Permanent}); err != nil {
 		plog.Panicf("update raftAttributes should never fail: %v", err)
 	}
-	fmt.Printf("mustUpdateMemberAttrInStore took %v\n", time.Since(startTime))
 }
 
 func mustSaveClusterVersionToStore(s v2store.Store, ver *semver.Version) {

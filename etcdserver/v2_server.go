@@ -16,7 +16,6 @@ package etcdserver
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.etcd.io/etcd/etcdserver/api/v2store"
@@ -83,8 +82,6 @@ func (a *reqV2HandlerEtcdServer) Post(ctx context.Context, r *RequestV2) (Respon
 }
 
 func (a *reqV2HandlerEtcdServer) Put(ctx context.Context, r *RequestV2) (Response, error) {
-	startTime := time.Now()
-	defer func() { fmt.Printf("V2HandlerEtcd/Raft.Put on %s: %v\n", a.s.Cfg.Name, time.Since(startTime)) }()
 	return a.processRaftRequest(ctx, r)
 }
 
@@ -122,7 +119,6 @@ func (a *reqV2HandlerEtcdServer) processRaftRequest(ctx context.Context, r *Requ
 }
 
 func (s *EtcdServer) Do(ctx context.Context, r pb.Request) (Response, error) {
-	startTime := time.Now()
 	r.ID = s.reqIDGen.Next()
 	h := &reqV2HandlerEtcdServer{
 		reqV2HandlerStore: reqV2HandlerStore{
@@ -132,10 +128,7 @@ func (s *EtcdServer) Do(ctx context.Context, r pb.Request) (Response, error) {
 		s: s,
 	}
 	rp := &r
-	handleTime := time.Now()
-	fmt.Printf("starting Handle() on %s\n", s.Cfg.Name)
 	resp, err := ((*RequestV2)(rp)).Handle(ctx, h)
-	fmt.Printf("etcdServer %s Do() took %v, %v for Handle\n", s.Cfg.Name, time.Since(startTime), time.Since(handleTime))
 	resp.Term, resp.Index = s.Term(), s.CommittedIndex()
 	return resp, err
 }
