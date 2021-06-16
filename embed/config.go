@@ -351,6 +351,10 @@ type Config struct {
 	// UnsafeNoFsync disables all uses of fsync.
 	// Setting this is unsafe and will cause data loss.
 	UnsafeNoFsync bool `json:"unsafe-no-fsync"`
+
+	// BootstrapTimeout configures the timeout for initial
+	// attempts to talk to other nodes when bootstrapping.
+	BootstrapTimeout time.Duration `json:"bootstrap-timeout"`
 }
 
 // configYAML holds the config suitable for yaml parsing
